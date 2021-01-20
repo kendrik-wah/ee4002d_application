@@ -1,8 +1,18 @@
 import floormat
 from flask import Flask
 import requests
+import pymongo
+from pymongo import MongoClient
 
 app = Flask(__name__)
+db = MongoClient('localhost', 27017)
+
+"""
+Acquire the blackboard database.
+"""
+mcu_database = db.microcontrollers
+blackboard = db.blackboard
+
 
 @app.route('/initialize')
 def initialize():
@@ -14,11 +24,14 @@ def initialize():
         2) Ensure that databases can be contacted.
             a) Let the application contact the database.
                 a.1) The floormat database.
-                a.2) The 
+                a.2) The blackboard(?)
             b) Receive a response (if applicable).
-
     :return:
     """
+
+
+
+    requests.post("")
     return
 
 

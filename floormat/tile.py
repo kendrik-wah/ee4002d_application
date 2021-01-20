@@ -1,3 +1,8 @@
+import pymongo
+from pymongo import MongoClient
+
+database_client = MongoClient('localhost', 27017)
+
 BASIC_STATE = 1
 
 class Tile(object):
@@ -25,7 +30,7 @@ class Tile(object):
         self.position = position
         self.row_pos = row_pos
         self.col_pos = col_pos
-        self.state = 1
+        self.state = BASIC_STATE
         self.sentinel_value = 0
 
     """
@@ -34,14 +39,11 @@ class Tile(object):
     def get_state(self):
         return self.state
 
-
     def is_engaged(self):
         return self.get_state() > 1
 
-
     def get_sentinel_value(self):
         return self.sentinel_value
-
 
     def change_state(self, val):
         if val < 1:
@@ -54,7 +56,6 @@ class Tile(object):
         else:
             self.change_sentinel_value(0)
 
-
     def change_sentinel_value(self, sen_val):
         self.sentinel_value = sen_val
 
@@ -62,7 +63,7 @@ class Tile(object):
     Methods related to the positions of the floor tile. Such positions include index, row and column.
     """
     def get_pos(self):
-        return (self.position, self.row_pos, self.col_pos)
+        return self.position, self.row_pos, self.col_pos
 
     def set_position(self, pos):
-        self.position =  pos
+        self.position = pos
