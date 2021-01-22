@@ -50,9 +50,7 @@ def demo_processFloormatData():
                     elif val["min"] <= statemat[i][j] <= val["max"]:
                         statemat[i][j] = key
 
-        for row in statemat:
-            print(row)
-        print()
+        return statemat
 
 
 
@@ -60,4 +58,6 @@ if __name__ == "__main__":
 
     # weightMap = demo_acquireSensorClassMapping()
     # print(weightMap)
-    demo_processFloormatData()
+    statemat = demo_processFloormatData()
+    for row in statemat:
+        print(row)

@@ -1,0 +1,17 @@
+{
+  "1": {"representation":  "unengaged",
+        "min": 0,
+        "max": 499},
+  "2": {"representation":  "item",
+      "min": 500,
+      "max": 4999},
+  "3": {"representation":  "child",
+      "min": 5000,
+      "max": 11999},
+  "4": {"representation":  "young",
+        "min": 12000,
+        "max": 39999},
+  "5": {"representation":  "adult",
+      "min": 40000,
+      "max": 70000}
+}
