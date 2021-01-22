@@ -1,4 +1,4 @@
-from tile import Tile
+from floormat.tile import Tile
 import pymongo
 from pymongo import MongoClient
 
@@ -70,7 +70,7 @@ class Floormat(object):
         if type(i) != int or type(j) != int:
             print("Please ensure i (column) and j (row) are integer inputs.")
             return
-        elif i != None and j != None and i < self.col and j < self.row:
+        elif i != None and j != None and i < self.column and j < self.row:
             self.tiles.add((i,j))
 
     def update_tile_state(self, tiles=None):

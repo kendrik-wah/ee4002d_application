@@ -46,15 +46,7 @@ class Tile(object):
         return self.sentinel_value
 
     def change_state(self, val):
-        if val < 1:
-            self.state = max(val, BASIC_STATE)
-        else:
-            self.state = val
-
-        if val > 1:
-            self.change_sentinel_value(1)
-        else:
-            self.change_sentinel_value(0)
+        self.state = val
 
     def change_sentinel_value(self, sen_val):
         self.sentinel_value = sen_val
