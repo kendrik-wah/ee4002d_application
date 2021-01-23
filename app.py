@@ -29,8 +29,6 @@ def initialize():
     :return:
     """
 
-
-
     requests.post("")
     return
 
@@ -44,5 +42,8 @@ def index():
 
     :return:
     """
+
+
+
     return 'Hello world!'
 

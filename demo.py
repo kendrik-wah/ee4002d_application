@@ -21,7 +21,7 @@ def demo_processFloormatData():
 
     for test_case in test_cases:
 
-        floormat = Floormat(row=4, column=2)
+        floormat = Floormat(row=2, column=2)
         dims = floormat.get_dimensions()
         m = dims[1]
         n = dims[0]
@@ -40,20 +40,22 @@ def demo_processFloormatData():
         floormat.update_tile_state(tiles)
         statemat = floormat.get_floormat_states(key=1)
 
+        print(weightMap)
+
         for i in range(m):
             for j in range(n):
                 for key, val in weightMap.items():
                     if statemat[i][j] <= 0:
-                        statemat[i][j] = 1
+                        statemat[i][j] = val["colour"]
                         break
 
                     elif val["min"] <= statemat[i][j] <= val["max"]:
-                        statemat[i][j] = key
+                        statemat[i][j] = val["colour"]
+                        break
 
         for row in statemat:
             print(row)
         print()
-
 
 
 if __name__ == "__main__":
