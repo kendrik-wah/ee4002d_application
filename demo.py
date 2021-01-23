@@ -18,6 +18,7 @@ def demo_processFloormatData():
     
     test_cases = open("test_cases.txt", "rb")
     weightMap = demo_acquireSensorClassMapping()
+    statemaps = []
 
     for test_case in test_cases:
 
@@ -40,8 +41,6 @@ def demo_processFloormatData():
         floormat.update_tile_state(tiles)
         statemat = floormat.get_floormat_states(key=1)
 
-        print(weightMap)
-
         for i in range(m):
             for j in range(n):
                 for key, val in weightMap.items():
@@ -53,13 +52,13 @@ def demo_processFloormatData():
                         statemat[i][j] = val["colour"]
                         break
 
-        for row in statemat:
-            print(row)
-        print()
+        statemaps.append(statemat)
+    
+    return statemaps
 
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
 
     # weightMap = demo_acquireSensorClassMapping()
     # print(weightMap)
-    demo_processFloormatData()
+    # demo_processFloormatData()

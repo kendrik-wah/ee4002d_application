@@ -1,10 +1,15 @@
 import floormat
-from flask import Flask
 import requests
 import pymongo
+import demo
+
+from flask import Flask, render_template
+from flask_socketio import SocketIO, emit, disconnect
 from pymongo import MongoClient
 
+async_mode = None
 app = Flask(__name__)
+socket = SocketIO(app, async_mode=async_mode)
 db = MongoClient('localhost', 27017)
 
 """
@@ -12,6 +17,9 @@ Acquire the blackboard database.
 """
 mcu_database = db.microcontrollers
 blackboard = db.blackboard
+
+
+rotate_idx = 0
 
 
 @app.route('/initialize')
@@ -43,7 +51,12 @@ def index():
     :return:
     """
 
+    heatmaps = demo.demo_processFloormatData()
+    for heatmap in heatmaps:
+        render_template('heatmap.html',
+                        sync_mode=socket.async_mode,
+                        heatmap=heatmap)
 
 
-    return 'Hello world!'
-
+if __name__ == "__main__":
+    socket.run(app, debug=True)

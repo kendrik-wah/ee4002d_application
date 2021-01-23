@@ -1,9 +1,25 @@
 <html>
     <head>
         <title>Tact-COSMOS Heatmap</title>
+
+        <link rel="stylesheet" type="text/css" href="static/css/heatmap.css">
+
+        <script type="text/javascript" src="static/js/render.js"></script>
     </head>
 
     <body>
-
+        {% if heatmap %}
+            <div class="heatmap" id="heatmap">
+                <div class="tile">
+                {% for row in heatmap %}
+                    {% for colour in row %}
+                        <div class="sensor"
+                             id="sensor"
+                             style="background-color:{{ colour }}"></div>
+                    {% endfor %}
+                {% endfor %}
+                </div>
+            </div>
+        {% endif %}
     </body>
 </html>

@@ -1,0 +1,19 @@
+.heatmap {
+    border: 1px solid black;
+    width: 500px;
+    height: 500px;
+}
+
+.tile {
+    display: grid;
+    grid-template-columns: 200px 200px;
+    grid-template-rows: 200px 200px;
+    max-width: 450px;
+    max-height: 450px;
+}
+
+.sensor {
+    max-width: 250px;
+    max-height: 250px;
+    border: 1px solid black;
+}
