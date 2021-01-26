@@ -22,7 +22,7 @@ def demo_processFloormatData():
 
     for test_case in test_cases:
 
-        floormat = Floormat(row=2, column=2)
+        floormat = Floormat(row=3, column=3)
         dims = floormat.get_dimensions()
         m = dims[1]
         n = dims[0]
@@ -34,9 +34,10 @@ def demo_processFloormatData():
         for i in range(m):
             for j in range(n):
                 tiles.add(((i, j), test_case[mul*i+j]))
+                print(mul*i+j)
                 floormat.activate_tile(i, j)
 
-            mul += n
+            mul += 1
 
         floormat.update_tile_state(tiles)
         statemat = floormat.get_floormat_states(key=1)

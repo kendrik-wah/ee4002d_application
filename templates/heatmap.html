@@ -4,22 +4,13 @@
 
         <link rel="stylesheet" type="text/css" href="static/css/heatmap.css">
 
-        <script type="text/javascript" src="static/js/render.js"></script>
+        <script src="//code.jquery.com/jquery-3.3.1.min.js"></script>
+        <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.0/socket.io.min.js"></script>
+        <script src="static/js/render.js"></script>
     </head>
 
     <body>
-        {% if heatmap %}
-            <div class="heatmap" id="heatmap">
-                <div class="tile">
-                {% for row in heatmap %}
-                    {% for colour in row %}
-                        <div class="sensor"
-                             id="sensor"
-                             style="background-color:{{ colour }}"></div>
-                    {% endfor %}
-                {% endfor %}
-                </div>
-            </div>
-        {% endif %}
+        <div class="tile" id="tile"> <!-- /#log -->
+        </div>
     </body>
 </html>
