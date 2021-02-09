@@ -1,8 +1,3 @@
-import pymongo
-from pymongo import MongoClient
-
-database_client = MongoClient('localhost', 27017)
-
 BASIC_STATE = 1
 
 class Tile(object):

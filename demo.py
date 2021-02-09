@@ -1,6 +1,9 @@
 import json
 
+from bluepy.btle import Scanner
 from floormat.floormat import Floormat
+from interface.ble_scanner import ScanDelegate
+from interface.ble_peripheral import blePeripheral
 
 
 def demo_acquireSensorClassMapping():
@@ -58,7 +61,50 @@ def demo_processFloormatData():
     return statemaps
 
 
-# if __name__ == "__main__":
+def demo_bleScan():
+    bleScanner = Scanner().withDelegate(ScanDelegate())
+    devices = bleScanner.scan()
+
+    for dev in devices:
+        if dev.addr == '0c:61:cf:a3:01:39':
+            print("Device {} ({}), RSSI={} dB".format(dev.addr, dev.addrType, dev.rssi))
+            for (adtype, desc, value) in dev.getScanData():
+                print("  {} = {}".format(desc, value))
+
+            peripheral = blePeripheral(dev.addr)
+            services = peripheral.acquireService()
+            characteristics = peripheral.getCharacteristics()
+
+            print("Peripheral: {}".format(peripheral.getAddress()))
+            print("=================================")
+
+            for service in services:
+                print("UUID: {}".format(service.uuid))
+                print("UUID: {}".format(service.uuid.getCommonName()))
+                print("UUID: {}".format(service.uuid.binVal))
+                c = peripheral.getCharacteristics(uuid=service.uuid)
+                print("c: {}".format(c))
+            print("=================================")
+
+            for uuid, chars in characteristics.items():
+                print("UUID: {}, {}".format(uuid.getCommonName(), uuid.binVal))
+                for char in chars:
+                    print("Characteristic: {}, {}, {}".format(char.uuid, char.propertiesToString(), char.getHandle()))
+
+                print()
+
+            peripheral.enableNotify(uuid="0000fff0-0000-1000-8000-00805f9b34fb")
+            while True:
+                if peripheral.peripheral.waitForNotifications(1.0):
+                    print("Notification")
+                    continue
+            print("Waiting")
+
+            break
+
+
+if __name__ == "__main__":
+    demo_bleScan()
 
     # weightMap = demo_acquireSensorClassMapping()
     # print(weightMap)
