@@ -1,8 +1,16 @@
 import math
+from sklearn.cluster import KMeans, MiniBatchKMeans, SpectralClustering, SpectralBiclustering, SpectralCoclustering, OPTICS
+
+"""
+Compare accuracies for three to four algorithms:
+	1) KMeans (normal KMeans and MiniBatchKMeans) ==> elbow and silhouette
+	2) Spectral Clustering
+	3) OPTICS
+	
+"""
 
 four_sided_dirs = ((0, -1), (0, 1), (1, 0), (-1, 0))
 eight_sided_dirs = ((0, -1), (0, 1), (1, 0), (-1, 0), (-1,-1), (-1,1), (1,-1), (1,1))
-
 
 
 def get_clustered_points(data):

@@ -1,4 +1,19 @@
 from bluepy.btle import Peripheral, DefaultDelegate
+from bluepy import btle
+
+import datetime
+import threading
+
+event = threading.Event()
+
+def processData(data=None, delimiter=','):
+	if not data:
+		return None
+	if not isinstance(data, bytes):
+		pass
+	else:
+		# floormat values
+		return list(map(lambda x: float(x), data.decode().split(delimiter)))
 
 class PeripheralDelegate(DefaultDelegate):
 
@@ -6,48 +21,85 @@ class PeripheralDelegate(DefaultDelegate):
         DefaultDelegate.__init__(self)
         self.peripheral = per
 
-    def handleNotification(self, cHandle, data):
-        sensedValChar = self.peripheral.getCharacteristics(uuid="0000fff0-0000-1000-8000-00805f9b34fb")[0]
-        print(sensedValChar.read(), cHandle, data)
+    def handleNotification(self, cHandle, data):      
+        self.peripheral.setDateTime(datetime.datetime.now())
+        print("raw data: {}".format(data))
+        
+        if data == b'/' or data == b'\\':
+            self.peripheral.setData(data.decode())
+        else:
+            self.peripheral.setData(processData(data, ','))
+        
+        #print("values updated")
+        event.wait(1)
 
 
 class blePeripheral(object):
-    def __init__(self, addr):
-        self.peripheral = Peripheral(addr)
-        self.peripheral.setDelegate(PeripheralDelegate(self))
+	def __init__(self, addr):
+		self.peripheral = Peripheral(addr, "public")
+		self.peripheral.setDelegate(PeripheralDelegate(self))
+		self.dt = None
+		self.setDateTime(datetime.datetime.now())
 
-    def getAddress(self):
-        return self.peripheral.addr
+		self.data = ""
 
-    def disconnect(self):
-        return self.peripheral.disconnect()
+	def getAddress(self):
+		return self.peripheral.addr
 
-    def acquireService(self, uuid=None):
-        if not uuid:
-            return self.peripheral.getServices()
-        else:
-            return self.peripheral.getServiceByUUID(uuid)
+	def disconnect(self):
+		return self.peripheral.disconnect()
 
-    def getCharacteristics(self, uuid=None):
-        services = self.acquireService(uuid)
+	def acquireService(self, uuid=None):
+		if not uuid:
+			return self.peripheral.getServices()
+		else:
+			return self.peripheral.getServiceByUUID(uuid)
 
-        if uuid:
-            return services.getCharacteristics()
-        else:
-            characteristics = dict()
+	def getCharacteristics(self, uuid=None, sFlag=True):
+		if sFlag:
+			services = self.acquireService(uuid)
 
-            for service in services:
-                characteristics[service.uuid] = service.getCharacteristics()
+			if uuid:
+				return services.getCharacteristics()
+			else:
+				characteristics = dict()
 
-            return characteristics
+				for service in services:
+					characteristics[service.uuid] = service.getCharacteristics()
 
-    def enableNotify(self, uuid):
-        if not uuid:
-            print("Needs a valid UUID to enable notifications.")
-            return
-        else:
-            setup_data = b'\x01\x00'
-            char = self.getCharacteristics(uuid=uuid)[3]
-            notifyHandle = char.getHandle() + 1
-            self.peripheral.writeCharacteristic(notifyHandle, setup_data, withResponse=True)
+				return characteristics
+				
+		else:
+			if uuid:
+				return self.peripheral.getCharacteristics(uuid=uuid)
+			else:
+				return self.peripheral.getCharacteristics()
+				
+	def enableNotify(self, uuid):
+		if not uuid:
+			print("Needs a valid UUID to enable notifications.")
+			return
+		else:
+			setup_data = b'\x01\x00'
+			char = self.getCharacteristics(uuid=uuid)[0]
+			notifyHandle = char.getHandle() + 1
+			self.peripheral.writeCharacteristic(notifyHandle, setup_data, withResponse=True)
+			
+	def setData(self, data):
+		self.data = data
+	
+	def getData(self):
+		return self.data
+		
+	def setDateTime(self, dt):
+		self.dt = datetime.datetime.strftime(dt, "%d-%M-%Y %H:%M:%S")
+	
+	def getDateTime(self):
+		return self.dt
+		
+	def writeData(self, uuid=None, data=None):
+		dataCharacteristic = self.peripheral.getCharacteristics(uuid=uuid)
+		resp = dataCharacteristic.write(data=data, withResponse=True)
+		print(resp)
+			
 

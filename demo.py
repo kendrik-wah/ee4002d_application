@@ -5,7 +5,6 @@ from floormat.floormat import Floormat
 from interface.ble_scanner import ScanDelegate
 from interface.ble_peripheral import blePeripheral
 
-
 def demo_acquireSensorClassMapping():
 
     with open("weightMapping.json", "r") as json_file:
@@ -16,6 +15,7 @@ def demo_acquireSensorClassMapping():
         weightMapping[int(key)] = val
     
     return weightMapping
+    
     
 def demo_processFloormatData():
     
@@ -62,50 +62,52 @@ def demo_processFloormatData():
 
 
 def demo_bleScan():
-    bleScanner = Scanner().withDelegate(ScanDelegate())
-    devices = bleScanner.scan()
+	weightMap = demo_acquireSensorClassMapping()
+	bleScanner = Scanner().withDelegate(ScanDelegate())
+	devices = bleScanner.scan()
 
-    for dev in devices:
-        if dev.addr == '0c:61:cf:a3:01:39':
-            print("Device {} ({}), RSSI={} dB".format(dev.addr, dev.addrType, dev.rssi))
-            for (adtype, desc, value) in dev.getScanData():
-                print("  {} = {}".format(desc, value))
+	for dev in devices:
+		print(dev.addr, dev.getScanData())
+		if dev.addr == '8c:aa:b5:86:4a:2a':
 
-            peripheral = blePeripheral(dev.addr)
-            services = peripheral.acquireService()
-            characteristics = peripheral.getCharacteristics()
+			peripheral = blePeripheral(dev.addr)
+			services = peripheral.acquireService()
+			print("services: {}".format(services))
+			
+			characteristics = peripheral.getCharacteristics()
+			print("characteristics: {}".format(characteristics))
+			print()
 
-            print("Peripheral: {}".format(peripheral.getAddress()))
-            print("=================================")
+			print("Peripheral: {}".format(peripheral.getAddress()))
+			print("=================================")
 
-            for service in services:
-                print("UUID: {}".format(service.uuid))
-                print("UUID: {}".format(service.uuid.getCommonName()))
-                print("UUID: {}".format(service.uuid.binVal))
-                c = peripheral.getCharacteristics(uuid=service.uuid)
-                print("c: {}".format(c))
-            print("=================================")
+			for service in services:
+				print("UUID: {}".format(service.uuid))
+				print("UUID: {}".format(service.uuid.getCommonName()))
+				print("UUID: {}".format(service.uuid.binVal))
+				c = peripheral.getCharacteristics(uuid=service.uuid)
+				print("c: {}".format(c))
+			print("=================================")
 
-            for uuid, chars in characteristics.items():
-                print("UUID: {}, {}".format(uuid.getCommonName(), uuid.binVal))
-                for char in chars:
-                    print("Characteristic: {}, {}, {}".format(char.uuid, char.propertiesToString(), char.getHandle()))
+			for uuid, chars in characteristics.items():
+				print("UUID: {}, {}".format(uuid.getCommonName(), uuid.binVal))
+				for char in chars:
+					print("Characteristic: {}, {}, {}".format(char.uuid, char.propertiesToString(), char.getHandle()))
 
-                print()
+				print()
 
-            peripheral.enableNotify(uuid="0000fff0-0000-1000-8000-00805f9b34fb")
-            while True:
-                if peripheral.peripheral.waitForNotifications(1.0):
-                    print("Notification")
-                    continue
-            print("Waiting")
+			peripheral.enableNotify(uuid="e514ae34-a8c5-11ea-bb37-0242ac130002")
+			while True:
+				if peripheral.peripheral.waitForNotifications(3.0):
+					print("{}: {}".format(peripheral.getDateTime(), peripheral.getData()))
+				else:
+					print("nada nada yada haha")
+				
+			print("Waiting")
+			break
 
-            break
-
+	
 
 if __name__ == "__main__":
     demo_bleScan()
-
-    # weightMap = demo_acquireSensorClassMapping()
-    # print(weightMap)
     # demo_processFloormatData()

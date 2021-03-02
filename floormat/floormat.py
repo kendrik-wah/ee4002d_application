@@ -24,7 +24,7 @@ class Floormat(object):
         if row > 0 and column > 0:
             self.row = row
             self.column = column
-            self.floormat = [[Tile(row_pos=j, col_pos=i) for j in range(self.row)] for i in range(self.column)]
+            self.floormat = [[Tile(row_pos=j, col_pos=i) for j in range(self.column)] for i in range(self.row)]
         else:
             print("Ensure row and column are at least 1.")
             return
@@ -50,7 +50,7 @@ class Floormat(object):
         elif key == 1:
             statemat = []
             dims = self.get_dimensions()
-            for i in range(dims[1]):
+            for i in range(dims[0]):
                 statemat.append(list(map(lambda x: x.get_state(), self.floormat[i])))
 
             return statemat
@@ -58,7 +58,7 @@ class Floormat(object):
         elif key == 2:
             statemat = []
             dims = self.get_dimensions()
-            for i in range(dims[1]):
+            for i in range(dims[0]):
                 statemat.append(list(map(lambda x: x.get_sentinel_value(), self.floormat[i])))
 
             return statemat
@@ -70,7 +70,7 @@ class Floormat(object):
         if type(i) != int or type(j) != int:
             print("Please ensure i (column) and j (row) are integer inputs.")
             return
-        elif i != None and j != None and i < self.column and j < self.row:
+        elif i != None and j != None and j < self.column and i < self.row:
             self.tiles.add((i,j))
 
     def update_tile_state(self, tiles=None):
@@ -81,8 +81,8 @@ class Floormat(object):
         dims = self.get_dimensions()
         if not tiles:
             print("Resetting tile states.")
-            for i in range(dims[1]):
-                for j in range(dims[0]):
+            for i in range(dims[0]):
+                for j in range(dims[1]):
                     self.floormat[i][j].change_state(BASE_STATE)
 
             print("Emptying active tile set.")

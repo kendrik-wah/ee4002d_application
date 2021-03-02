@@ -5,7 +5,7 @@ class ScanDelegate(DefaultDelegate):
     def __init__(self):
         DefaultDelegate.__init__(self)
         self.scanner = Scanner()
-        self.scan_time = 10
+        self.scan_time = 30
         self.devices = set()
         self.services = dict()
 
