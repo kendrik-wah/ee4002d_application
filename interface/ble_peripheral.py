@@ -13,6 +13,7 @@ def processData(data=None, delimiter=','):
 		pass
 	else:
 		# floormat values
+		# print(list(map(lambda x: float(x), data.decode().split(delimiter))))
 		return list(map(lambda x: float(x), data.decode().split(delimiter)))
 
 class PeripheralDelegate(DefaultDelegate):
@@ -23,12 +24,15 @@ class PeripheralDelegate(DefaultDelegate):
 
     def handleNotification(self, cHandle, data):      
         self.peripheral.setDateTime(datetime.datetime.now())
-        print("raw data: {}".format(data))
+        # print("raw data: {}".format(data))
+        # print("===============================================\n")
         
         if data == b'/' or data == b'\\':
             self.peripheral.setData(data.decode())
-        else:
+        elif data != b'1' and data != b'2':
             self.peripheral.setData(processData(data, ','))
+        else:
+            print("data: {}".format(data))
         
         #print("values updated")
         event.wait(1)
@@ -98,8 +102,6 @@ class blePeripheral(object):
 		return self.dt
 		
 	def writeData(self, uuid=None, data=None):
-		dataCharacteristic = self.peripheral.getCharacteristics(uuid=uuid)
-		resp = dataCharacteristic.write(data=data, withResponse=True)
-		print(resp)
-			
+		print(self.getCharacteristics(uuid=uuid, sFlag=False)[0])
+		# self.peripheral.getCharacteristics(uuid=uuid)[0].write(data)
 

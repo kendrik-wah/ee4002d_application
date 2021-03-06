@@ -7,7 +7,7 @@ import os
 
 from random import random
 from threading import Thread, Event
-from flask import Flask, render_template
+from flask import Flask, render_template, redirect, url_for, request
 from flask_socketio import SocketIO, emit, disconnect
 from pymongo import MongoClient
 from bluepy.btle import Scanner
@@ -15,55 +15,21 @@ from floormat.floormat import Floormat
 from interface.ble_scanner import ScanDelegate
 from interface.ble_peripheral import blePeripheral
 
-async_mode = None
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
-app.config['DEBUG'] = True
 
-socketio = SocketIO(app, async_mode=None, logger=True, engineio_logger=True)
-db = MongoClient('localhost', 27017)
+socketio = SocketIO(app, async_mode=async_mode, logger=True, engineio_logger=True)
 
-"""
-Acquire the blackboard database.
-"""
-mcu_database = db.microcontrollers
-blackboard = db.blackboard
-
-
-# Random Number Generator Thread
+# Floormat Thread
 thread = Thread()
 thread_stop_event = Event()
 
-FLOORMAT_MAC = "8c:aa:b5:86:4a:2a"
-
+FLOORMAT_MAC = "ac:67:b2:f9:25:de"
 
 class RandomThread(Thread):
     def __init__(self):
         self.delay = 0.5
         super(RandomThread, self).__init__()
-
-    def heatMap(self):
-
-        i = 0
-        heatmaps = demo.demo_processFloormatData()
-        maxLen = len(heatmaps) - 1
-
-        while not thread_stop_event.isSet():
-
-            heatmap = heatmaps[i]
-
-            if i == maxLen:
-                i = 0
-            else:
-                i += 1
-
-            socketio.emit('newheatmap', {'heatmap': heatmap,
-                                         'cols': len(heatmap),
-                                         'rows': len(heatmap[0])},
-                          namespace='/test')
-
-            socketio.sleep(self.delay)
-
 
     def heatMapCompletePipeline(self):
 
@@ -71,15 +37,17 @@ class RandomThread(Thread):
         bleScanner = Scanner().withDelegate(ScanDelegate())
         devices = bleScanner.scan()
 
-        floormat = Floormat(row=1, column=3)
+        floormat = Floormat(row=4, column=4)
         dims = floormat.get_dimensions()
         print("dims: {}".format(dims))
         c = dims[1]
         r = dims[0]
         
         for dev in devices:
+            print(dev.addr, dev.getScanData())
             if dev.addr == FLOORMAT_MAC:
                 try:
+                    global peripheral
                     peripheral = blePeripheral(dev.addr)
                 except Exception as e:
                     raise(e)
@@ -87,29 +55,37 @@ class RandomThread(Thread):
                 services = peripheral.acquireService()
                 characteristics = peripheral.getCharacteristics()
                 peripheral.enableNotify(uuid="e514ae34-a8c5-11ea-bb37-0242ac130002")
+                refreshFlag = False
+                floormatData = []
 
                 while not thread_stop_event.isSet():
 
                     if peripheral.peripheral.waitForNotifications(3.0):
                         datetime = peripheral.getDateTime()
                         data = peripheral.getData()
-                        print(data)
+                        # print("data: {}".format(data))
+                        
+                        if data == "\\" and not refreshFlag:
+                            refreshFlag = True
+                        elif refreshFlag and data == '/':
+                            refreshFlag = False
+                            floormatData = []
+                        elif refreshFlag:
+                            floormatData.append(data)
 
-                        mul = 0
                         tiles = set()
+                        for j in range(len(data)):
+                            tiles.add(((len(floormatData)-1, j), data[j]))
+                            
                         for i in range(r):
                             for j in range(c):
-                                tiles.add(((i, j), data[mul * i + j]))
                                 floormat.activate_tile(i, j)
-                                
-                            mul += 1
 
                         floormat.update_tile_state(tiles)
                         statemat = floormat.get_floormat_states(key=1)
                         toSaveData = ""
                         
                         for row in statemat:
-                            print("row: {}".format(','.join(list(map(lambda x: str(x), row)))))
                             toSaveData += ','.join(list(map(lambda x: str(x), row)))
                         
                         if not os.path.isfile('./data.csv'):
@@ -121,7 +97,7 @@ class RandomThread(Thread):
                             	smWriter = csv.writer(inputFile)
                             	smWriter.writerow([toSaveData])
                             
-                        print("statemat: {}".format(statemat))
+                        # print("statemat: {}".format(statemat))
 
                         for i in range(r):
                             for j in range(c):
@@ -136,33 +112,26 @@ class RandomThread(Thread):
                         
                         socketio.emit('newheatmap', {'heatmap': statemat,
                                                      'cols': c,
-                                                     'rows': r}, namespace='/test')
+                                                     'rows': r})
                         socketio.sleep(self.delay)
 
                     else:
-                        print("Nothing new has arrived")
+                        print("Nothing new has arrived, connection status: {}".format(peripheral.getState()))
                         pass
-
-    def randomNumberGenerator(self):
-        """
-        Generate a random number every 1 second and emit to a socketio instance (broadcast)
-        Ideally to be run in a separate thread?
-        """
-        # infinite loop of magical random numbers
-        print("Making random numbers")
-        while not thread_stop_event.isSet():
-            number = round(random() * 10, 3)
-            print(number)
-            socketio.emit('newnumber', {'number': number}, namespace='/test')
-            socketio.sleep(self.delay)
 
     def run(self):
         self.heatMapCompletePipeline()
 
 
-@socketio.on('my event')
-def test_message(message):
-    emit('my response', {'data': 'got it'})
+@socketio.on('tarecal', namespace='/tarecal')
+def tareCalHandler(flag, methods=['GET', 'POST']):
+    print("flag received: {}".format(flag))
+    tareCal(flag)
+
+def tareCal(flag, methods=['GET', 'POST']):
+    print(flag)
+    if flag == 1 or flag == 2:
+        peripheral.writeData(uuid="809a3309-2e5c-4d68-acef-196222cf9886", data=bytes(str(flag)))
 
 
 # Python code to start Asynchronous Number Generation
@@ -172,8 +141,8 @@ def index():
     return render_template('heatmap.html')
 
 
-@socketio.on('connect', namespace='/test')
-def test_connect():
+@socketio.on('connect')
+def connect():
     # need visibility of the global thread object
     global thread
     print('Client connected')

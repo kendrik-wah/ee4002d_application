@@ -1,12 +1,11 @@
 //Client-side Javascript code for handling heatmap
 $(document).ready(function(){
+
     //connect to the socket server.
     var socket = io.connect('http://' + document.domain + ':' + location.port + '/test');
-    console.log(document.domain, location.port);
 
     //receive details from server
     socket.on('newheatmap', function(msg) {
-//        console.log(msg.heatmap, msg.cols, msg.rows);
 
         var cell = "";
         for (var i = 0; i < msg.rows; i++) {
