@@ -32,8 +32,8 @@ WRITE = 'W'
 # Define endpoints
 FLOORMAT_MAC = "ac:67:b2:f9:25:de"
 NOTIFY_UUID = "e514ae34-a8c5-11ea-bb37-0242ac130002"
-APP_ENDPOINT = 'https://cosmos-visuals.herokuapp.com/'
-#APP_ENDPOINT = 'http://127.0.0.1:8000/'
+# APP_ENDPOINT = 'https://cosmos-visuals.herokuapp.com/'
+APP_ENDPOINT = 'http://127.0.0.1:5000/'
 
 dbClient = DatabaseClient()
 

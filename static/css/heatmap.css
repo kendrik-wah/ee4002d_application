@@ -1,5 +1,15 @@
+html {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
 body {
     background-color: #445760;
+    width: 70%;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 5%;
 }
 
 h1, h3, p, button {
@@ -26,8 +36,6 @@ button {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 70vh;
-    overflow: hidden;
 }
 
 .app-div {
@@ -166,19 +174,25 @@ button {
     color: #ffffff;
 }
 
-.first-init-div {
+.updates-div {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.first-init-div, .last-updated-div, .last-tared-div {
     margin-left: auto;
     margin-right: auto;
 }
 
-.first-init-header {
+.first-init-header, .last-updated-header, .last-tared-header {
     text-align: center;
     color: #ffffff;
     margin-bottom: 0;
     font-size: 90%;
 }
 
-.init-datetime {
+.init-datetime, .last-updated-datetime, .last-tared-datetime {
     font-weight: 700;
     font-style: italic;
     font-size: 80%;

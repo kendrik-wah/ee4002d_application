@@ -19,6 +19,11 @@ $(document).ready(function(){
         };
 
         document.getElementById('tile-grid').innerHTML = cell;
+        document.getElementById('last-updated-datetime').innerHTML = msg.datetime;
+        
+        if (msg.isTared == true && msg.completeTared == true) {
+            document.getElementById('last-tared-datetime').innerHTML = msg.datetime;
+        }
         
         var updateList = Array.from(document.getElementById('updates').children);
         var updateList = updateList.map(function(element) {return element.outerHTML});
