@@ -1,9 +1,26 @@
+import os
+import datetime
 import json
+import floormat
+import requests
+import pymongo
+import demo
+import csv
+import datetime
+import bluepy.btle
 
+from random import random
+from threading import Thread, Event
+from pymongo import MongoClient
 from bluepy.btle import Scanner
 from floormat.floormat import Floormat
 from interface.ble_scanner import ScanDelegate
 from interface.ble_peripheral import blePeripheral
+from algorithms import getSnapshot, createHeatMap
+
+
+FLOORMAT_MAC = "ac:67:b2:f9:25:de"
+NOTIFY_UUID = "e514ae34-a8c5-11ea-bb37-0242ac130002"
 
 def demo_acquireSensorClassMapping():
 
@@ -15,6 +32,18 @@ def demo_acquireSensorClassMapping():
         weightMapping[int(key)] = val
     
     return weightMapping
+
+
+def demo_getTileFactors():
+    
+    with open("tileFactors.json", "r") as json_file:
+        loadedData = json.load(json_file)
+        
+    tileFactors = dict()
+    for key, val in loadedData.items():
+        tileFactors[int(key)] = val
+    
+    return tileFactors
     
     
 def demo_processFloormatData():
@@ -25,25 +54,29 @@ def demo_processFloormatData():
 
     for test_case in test_cases:
 
-        floormat = Floormat(row=3, column=3)
+        floormat = Floormat(row=4, column=4, tileFactor=demo_getTileFactors())
         dims = floormat.get_dimensions()
         m = dims[1]
         n = dims[0]
         tiles = set()
 
-        test_case = list(map(lambda x: float(x), test_case.decode('utf-8').split('|')))
-        mul = 0
-
+        test_case = list(map(lambda x: float(x), test_case.decode('utf-8').split(',')))
+        counter = 0
+        
         for i in range(m):
             for j in range(n):
-                tiles.add(((i, j), test_case[mul*i+j]))
-                print(mul*i+j)
+                tiles.add(((i, j), test_case[counter]))
+                counter += 1
                 floormat.activate_tile(i, j)
-
-            mul += 1
+        print("tiles: {}".format(tiles))
 
         floormat.update_tile_state(tiles)
         statemat = floormat.get_floormat_states(key=1)
+        statemat = list(map(lambda x: list(map(lambda y: round(y, 2), x)), statemat))
+        
+        print("=================================================\n")
+        print("statemat: {}".format(statemat))
+        print("=================================================\n")
 
         for i in range(m):
             for j in range(n):
@@ -109,5 +142,5 @@ def demo_bleScan():
 	
 
 if __name__ == "__main__":
-    demo_bleScan()
+    print(demo_getTileFactors())
     # demo_processFloormatData()

@@ -3,19 +3,68 @@
         <title>Tact-COSMOS Heatmap</title>
 
         <link rel="stylesheet" type="text/css" href="static/css/heatmap.css">
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com">
+	<link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,700;1,100&display=swap" rel="stylesheet"> 
+	
 
         <script src="//code.jquery.com/jquery-3.3.1.min.js"></script>
         <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.0/socket.io.min.js"></script>
+        <script type="text/javascript" charset="utf-8">
+	    var socket = io();
+	    socket.on('connect', function() {
+		socket.emit('connack', {data: 'I\'m connected!'});
+		console.log("connected!!!");
+	    });
+        </script>
         
         <script src="static/js/render.js"></script>
         <script src="static/js/tarecal.js"></script>
     </head>
 
     <body>
-        <div class="tile" id="tile"> <!-- /#log -->
+        <div class='body-div' id='body-div'>
+        	<div class='app-div' id='app-div'>
+			<div class='cosmos-app' id='cosmos-app'>
+			    <div class="app-title-div" id="app-title-div">
+				<h1 class='app-title' id='app-title'>COSMOS CA2 Demo Webpage</h1>
+			    </div>
+			
+			    <div class="heatmap" id="heatmap">
+				<div class='tile-grid' id='tile-grid'>
+				</div>
+			    </div>
+				
+			    <div class="tarecal" id="tarecal">
+				<div class='buttons' id='buttons'>
+				    <button id='tare' name='tare' value="1">TARE</button>
+				    <button id='cal' name='cal' value="2">CALIBRATE</button>
+				    <button id='store' name='store' value="3">RECORD DATA</button>
+				</div>
+			    </div>
+			</div>
+			
+			<div class='update-bar-div' id='update-bar-div'>
+				<div class="update-title-div" id="update-title-div">
+					<h3 class='update-title' id='update-title'>Notifications</h3>
+				</div>
+				
+				<div class='updates' id='updates'>
+					<div class='notification-div' id='notification-div'>
+						<div class='notification-text-div'>
+							<h3 class="notification-header" id="notification-header">Starting application...</h3>
+							<p class='notification' id='notification'>Please wait for heatmap to initialize.</p>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
         </div>
         
-        <button id='tare' name='tare' value="1">TARE</button>
-        <button id='cal' name='cal' value="2">CALIBRATE</button>
+        <div class='first-init-div' id='first-init-div'>
+        	<h3 class="first-init-header" id="first-init-header">Reinitialized at:</h3>
+        	<p class="init-datetime" id="init-datetime"></p>
+        </div>
+        
     </body>
 </html>

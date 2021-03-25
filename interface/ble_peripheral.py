@@ -13,8 +13,8 @@ def processData(data=None, delimiter=','):
 		pass
 	else:
 		# floormat values
-		# print(list(map(lambda x: float(x), data.decode().split(delimiter))))
-		return list(map(lambda x: float(x), data.decode().split(delimiter)))
+		# print(list(filter(lambda x: len(x) > 0, data.decode().split(','))))
+		return list(map(lambda x: float(x), list(filter(lambda x: len(x) > 0, data.decode().split(',')))))
 
 class PeripheralDelegate(DefaultDelegate):
 
@@ -96,12 +96,17 @@ class blePeripheral(object):
 		return self.data
 		
 	def setDateTime(self, dt):
-		self.dt = datetime.datetime.strftime(dt, "%d-%M-%Y %H:%M:%S")
+		self.dt = datetime.datetime.strftime(dt, "%d-%m-%Y %H:%M:%S")
 	
 	def getDateTime(self):
 		return self.dt
 		
 	def writeData(self, uuid=None, data=None):
-		print(self.getCharacteristics(uuid=uuid, sFlag=False)[0])
+		try:
+			self.getCharacteristics(uuid=uuid, sFlag=False)[0].write(data)
+		except Exception as e:
+			raise(e)
+		else:
+			print("successfully written data!")	
 		# self.peripheral.getCharacteristics(uuid=uuid)[0].write(data)
 

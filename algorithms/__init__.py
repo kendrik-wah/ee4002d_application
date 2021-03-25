@@ -1,4 +1,8 @@
 import math
+import copy
+
+from floormat.floormat import Floormat
+from interface.ble_peripheral import blePeripheral
 from sklearn.cluster import KMeans, MiniBatchKMeans, SpectralClustering, SpectralBiclustering, SpectralCoclustering, OPTICS
 
 """
@@ -8,6 +12,38 @@ Compare accuracies for three to four algorithms:
 	3) OPTICS
 	
 """
+
+def getSnapshot(peripheral, floormat, rowCnt):
+
+    row = [peripheral.getDateTime()]
+    statemat = floormat.get_floormat_states(key=1)
+    toSaveData = ""
+    
+    for i in range(len(statemat)):
+        toSaveData += ','.join(list(map(lambda x: str(x), statemat[i])))
+        
+        if i != rowCnt:
+            toSaveData += ','
+    
+    return [peripheral.getDateTime(), toSaveData]
+
+
+def createHeatMap(statemat, weightMap, r, c):
+    
+    heatmap = copy.deepcopy(statemat)
+    for i in range(r):
+        for j in range(c):
+            for key, val in weightMap.items():
+                if heatmap[i][j] <= 0:
+                    heatmap[i][j] = val["colour"]
+                    break
+
+                elif val["min"] <= heatmap[i][j] <= val["max"]:
+                    heatmap[i][j] = val["colour"]
+                    break
+
+    return heatmap
+
 
 four_sided_dirs = ((0, -1), (0, 1), (1, 0), (-1, 0))
 eight_sided_dirs = ((0, -1), (0, 1), (1, 0), (-1, 0), (-1,-1), (-1,1), (1,-1), (1,1))

@@ -11,16 +11,47 @@ $(document).ready(function(){
     	}
     	catch(err) {
     	    console.log(err);
-    	    return False;
+    	    return false;
+    	}
+    };
+    
+    function send_recordCommand() {
+    	try {
+	    socket.emit('record');
+	    return true;
+    	}
+    	catch(err) {
+    	    console.log(err);
+    	    return false;
     	}
     };
     
     document.getElementById('tare').onclick = function() {
-//      alert("button tare was clicked");
     	send_tareCalCommand(1);
     }
     document.getElementById('cal').onclick = function() {
     	send_tareCalCommand(2);
-//	alert("button calibrate was clicked");
     }
-});
+    document.getElementById('store').onclick = function() {
+        send_recordCommand();
+    }
+    
+    socket.on('midtarecal', function() {
+    	var updateList = Array.from(document.getElementById('updates').children);
+    	console.log(updateList);
+    	updateList.reverse();
+    	updateList.push('<div class="notification-div" id="notification-div"><div class="notification-text-div"><h3 class="notification-header" id="notification-header">I\'m sorry, but hang on...</h3><p class="notification" id="notification">Floormat is still taring</p></div></div>');
+    	updateList.reverse();
+    
+        if (updateList.length >= 10) {
+            updateList = updateList.slice(0, updateList.length-1);
+        }
+        
+        var newList = "";
+        for (var i = 0; i < updateList.length; i++) {
+            newList = newList + updateList[i];
+        }
+        
+        document.getElementById('updates').innerHTML = newList;
+    })
+});	
