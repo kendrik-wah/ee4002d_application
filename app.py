@@ -18,22 +18,30 @@ from mongoclient import DatabaseClient
 from bluepy.btle import Scanner
 from floormat.floormat import Floormat
 from interface.ble_scanner import ScanDelegate
-from interface.ble_peripheral import blePeripheral
+from interface.ble_peripheral import blePeripheral, PeripheralDelegate
 from algorithms import getSnapshot, createHeatMap
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app, async_mode=None, logger=True, engineio_logger=True)
 
+SERVICE = 'S'
+CHARACTERISTIC = 'C'
+ACQUIRE = 'A'
 EMIT = 'E'
 POST = 'P'
 WRITE = 'W'
+LOG = 'L'
+MTU_SIZE = 200
 
 # Define endpoints
-FLOORMAT_MAC = "ac:67:b2:f9:25:de"
+TEST_FLOORMAT_MAC = "ac:67:b2:f9:25:de"
+ACTUAL_FLOORMAT_MAC = "8c:aa:b5:86:4a:2a"
+
+FLOORMAT_MAC = ACTUAL_FLOORMAT_MAC
 NOTIFY_UUID = "e514ae34-a8c5-11ea-bb37-0242ac130002"
-# APP_ENDPOINT = 'https://cosmos-visuals.herokuapp.com/'
-APP_ENDPOINT = 'http://127.0.0.1:5000/'
+APP_ENDPOINT = 'https://cosmos-visuals.herokuapp.com/'
+# APP_ENDPOINT = 'http://127.0.0.1:5000/'
 
 dbClient = DatabaseClient()
 
@@ -47,13 +55,36 @@ class TimedThread(Thread):
     def run(self):
         while True:
             key = self.queue.get()
-            try:   
-                if key == EMIT:
+            try:
+                if key == SERVICE:
+                    self.master.services = self.master.peripheral.acquireService()
+                    
+                elif key == CHARACTERISTIC:
+                    self.master.characteristics = self.master.peripheral.getCharacteristics()
+                    
+                elif key == ACQUIRE:
+                    self.master.floormat.update_tile_state(self.master.tiles)
+                    self.master.peripheral.setDateTime(datetime.datetime.now())
+                    self.master.statemat = self.master.floormat.get_floormat_states(key=1)
+                    self.master.heatmap = createHeatMap(self.master.statemat, self.master.weightMap, self.master.dims[0], self.master.dims[1])
+        
+                elif key == EMIT:
                     self.master.emitHeatmap()
+                    
                 elif key == POST:
                     self.master.postHeatmap()
+                    
                 elif key == WRITE:
                     self.master.writeToCSV()
+                    
+                elif key == LOG:
+                    print('statemat: {}'.format(self.master.statemat))
+                    print('heatmap: {}'.format(self.master.heatmap))
+                    print('datetime: {}'.format(self.master.peripheral.getDateTime()))
+                    print('isTared: {}'.format(self.master.floormat.tareStatus()[0]))
+                    print('completeTared: {}'.format(self.master.floormat.tareStatus()[1]))
+                    print('writeFlag: {}'.format(self.master.writeFlag))
+                    
             finally:
                 self.queue.task_done()
 
@@ -64,7 +95,7 @@ class TimedThread(Thread):
 
 class RandomThread(Thread):
     def __init__(self):
-        self.delay = 0.5
+        self.delay = 0.1
         self.bleScanner = Scanner().withDelegate(ScanDelegate())
         self.peripheral = None
         self.services = None
@@ -77,10 +108,18 @@ class RandomThread(Thread):
         self.heatmap = None
         self.floormatData = []
         self.rowCnt = 0
+        self.tiles = set()
         
         self.isConnected = False
         self.refreshFlag = True
         self.writeFlag = False
+        
+        self.workers = 1
+        self.queue = Queue()
+        for i in range(self.workers):
+            worker = TimedThread(self.queue, self)
+            worker.daemon = True
+            worker.start()
         
         super(RandomThread, self).__init__()
         
@@ -97,9 +136,17 @@ class RandomThread(Thread):
         return self.peripheral
     
     
-    def scanDevices(self):
-        devices = self.bleScanner.scan()
-        return devices
+    def scanDevices(self, cnt=0):
+        if cnt < 3:
+            try:
+                devices = self.bleScanner.scan()
+                return devices
+            except Exception as e:
+                socketio.sleep(3)
+                self.scanDevices(cnt+1)
+                
+        print("scanning protocol failed!")
+        return None
     
     
     def getWriteFlag(self):
@@ -113,10 +160,19 @@ class RandomThread(Thread):
         
     
     def connectDevice(self, devices, mac=None, notifyUUID=None):
+        print("Finding device {}".format(mac))
+        if not devices:
+            return False
+            
         for device in devices:
             if device.addr == mac and mac:
                 try:
-                    self.peripheral = blePeripheral(dev.addr)
+                    self.peripheral = blePeripheral(device.addr, MTU_SIZE)
+                    self.peripheral.peripheral.setDelegate(PeripheralDelegate(self.peripheral))
+                    
+                    self.queue.put(POST)
+                    self.queue.put(EMIT)
+                    self.queue.join()
                     
                     if notifyUUID:
                          try:
@@ -124,17 +180,21 @@ class RandomThread(Thread):
                          except Exception as e:
                              raise(e)
                     
+                    self.queue.put(SERVICE)
+                    self.queue.put(CHARACTERISTIC)
+                    self.queue.join()
+
                     self.isConnected = True
                     print("Connected successfully to {}".format(mac))
-                    return True
+                    return self.isConnected
                              
                 except Exception as e:
-                    if isinstance(e, BTLEException):
+                    if isinstance(e, bluepy.btle.BTLEException):
                         print("Device cannot be connected to. It may be connected currently.")
                     else:
                         raise(e)
                     
-                    return False
+        return False
                     
     def disconnectDevice(self):
         if not self.peripheral:
@@ -168,41 +228,26 @@ class RandomThread(Thread):
     
             
     def updateFloormat(self):
-        tiles = set()
-        while self.rowCnt < 4:     
-            self.acquireData()            
-            for j in range(len(self.floormatData)):
-                tiles.add(((self.rowCnt, j), self.floormatData[j]))
-            
-            self.rowCnt = self.rowCnt+1
-            socketio.sleep(self.delay)        
-
-        self.rowCnt = 0
-        self.floormat.update_tile_state(tiles)
-        self.peripheral.setDateTime(datetime.datetime.now())
-        self.statemat = self.floormat.get_floormat_states(key=1)
-        self.heatmap = createHeatMap(self.statemat, self.weightMap, self.dims[0], self.dims[1])
-
-        print('statemat: {}'.format(self.statemat))
-        print('heatmap: {}'.format(self.heatmap))
-        print('cols: {}'.format(self.dims[1]))
-        print('rows: {}'.format(self.dims[0]))
-        print('datetime: {}'.format(self.peripheral.getDateTime()))
-        print('isTared: {}'.format(self.floormat.tareStatus()[0]))
-        print('completeTared: {}'.format(self.floormat.tareStatus()[1]))
-        print('writeFlag: {}'.format(self.writeFlag))
+        self.tiles = set()
+        self.acquireData()
+        cntr = 0
         
-        queue = Queue()
-        worker = TimedThread(queue, self)
-        worker.daemon = True
-        worker.start()
+        while self.rowCnt < self.dims[0]:
+            for j in range(self.dims[1]):
+                self.tiles.add(((self.rowCnt, j), self.floormatData[cntr]))
+                cntr += 1
             
-        queue.put(POST)
-        queue.put(EMIT)
+            self.rowCnt = self.rowCnt+1     
+        
+        self.rowCnt = 0
+        self.queue.put(ACQUIRE)
+        self.queue.put(LOG)    
+        self.queue.put(POST)
+        self.queue.put(EMIT)
         if self.getWriteFlag():
-            queue.put(WRITE)
+            self.queue.put(WRITE)
             
-        queue.join()
+        self.queue.join()
         
         if self.floormat.tareStatus()[1]:
             self.floormat.set_isTared(False)
@@ -273,60 +318,51 @@ class RandomThread(Thread):
                  socketio.emit('newheatmap', {'heatmap': heatmap,
                                               'cols': 4,
                                               'rows': 4})
-                 socketio.sleep(self.delay+2)
+                 socketio.sleep(self.delay/2)
 
 
     def runPipeline(self):
-        devices = self.scanDevices()
         
         self.activateTiles()
         self.statemat = self.floormat.get_floormat_states(key=1)
         self.heatmap = createHeatMap(self.statemat, self.weightMap, self.dims[1], self.dims[0])
         
-        for dev in devices:
-            print(dev.addr, dev.getScanData())
-            if dev.addr == FLOORMAT_MAC:
-                try:
-                    self.peripheral = blePeripheral(dev.addr)
-                    queue = Queue()
-                    worker = TimedThread(queue, self)
-                    worker.daemon = True
-                    worker.start()
+        while not self.isConnected:
+            self.connectDevice(self.scanDevices(), FLOORMAT_MAC, NOTIFY_UUID)
+            socketio.sleep(self.delay*10)
             
-                    queue.put(POST)
-                    queue.put(EMIT)
-                    queue.join()
-                    
-                except Exception as e:
-                    raise(e)
-                    sys.exit(1)
-	
-                self.services = self.peripheral.acquireService()
-                self.characteristics = self.peripheral.getCharacteristics()
-                self.peripheral.enableNotify(uuid=NOTIFY_UUID)
+            if self.isConnected:
+                break
+        
+        while not thread_stop_event.isSet():
+            try:
+                if self.peripheral.peripheral.waitForNotifications(3.0):
+                    print("========================= ACQUIRING DATA ========================")
+                    self.updateFloormat()
+                    socketio.sleep(self.delay)
+                    print("=================================================================")
 
-                while not thread_stop_event.isSet():
-                    try:
-                        if self.peripheral.peripheral.waitForNotifications(3.0):
-                            print("========================= ACQUIRING DATA ========================")
-                            self.updateFloormat()
-                            socketio.sleep(self.delay)
-                            print("=================================================================")
-
-                        else:
-                            print("Nothing new has arrived")
-                            pass
+                else:
+                    print("Nothing new has arrived")
+                    pass
                             
-                    except Exception as e:
-                        raise(e)
-                        print("=========================== HELLO WORLD ========================")
-                        self.peripheral.disconnect()
-                        self.peripheral = blePeripheral(FLOORMAT_MAC)
-                        self.peripheral.enableNotify(uuid=NOTIFY_UUID)
-                        print("Peripheral successfully re-connected!")
+            except Exception as e:
+                print("=========================== HELLO WORLD ========================")
+                self.peripheral.disconnect()
+                self.peripheral = blePeripheral(FLOORMAT_MAC, MTU_SIZE)
+                self.peripheral.peripheral.setDelegate(PeripheralDelegate(self.peripheral))
+                self.peripheral.enableNotify(uuid=NOTIFY_UUID)
+                self.floormat.set_isTared(False)
+                self.floormat.set_completeTared(False)
+                print("Peripheral successfully re-connected!")
 
     def run(self):
-        self.runPipeline()
+        try:
+            self.runPipeline()
+        except KeyboardInterrupt:
+            if self.peripheral:
+                self.peripheral.disconnect()
+            sys.exit(1)
 
 # Floormat Thread
 thread = RandomThread()
@@ -355,15 +391,21 @@ def connect():
 def connectHandler(msg):
     print("connection established: {}".format(msg))
     socketio.emit('reinitialized', data={"datetime": datetime.datetime.strftime(datetime.datetime.now(), "%d-%m-%Y %H:%M:%S")})
+    socketio.emit('record-flagger', {"flag": False})
 
 def tareCalHandler(flag):
     print("flag received: {}".format(flag))
     tareCal(flag)
 
-def recordHandler(data):
+def recordHandler():
     thread.setWriteFlag(not thread.getWriteFlag())
     print("Record flag switched")
     recordResponse(thread.getWriteFlag())
+    if thread.getWriteFlag():
+        socketio.emit('record-flagger', {"flag": True})
+    else:
+        socketio.emit('record-flagger', {"flag": False})
+
 
 def tareCal(flag):
     if (flag == 1 or flag == 2) and not thread.floormat.tareStatus()[0]:

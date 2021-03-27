@@ -175,6 +175,15 @@ button {
 }
 
 .updates-div {
+    margin-top: 2.5%;
+    display: block;
+}
+
+.rec-shower {
+    margin-bottom: 2.5%;
+}
+
+.flaggers {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -190,9 +199,10 @@ button {
     color: #ffffff;
     margin-bottom: 0;
     font-size: 90%;
+    margin-top: 0;
 }
 
-.init-datetime, .last-updated-datetime, .last-tared-datetime {
+.init-datetime, .last-updated-datetime, .last-tared-datetime, .rec {
     font-weight: 700;
     font-style: italic;
     font-size: 80%;
@@ -200,4 +210,5 @@ button {
     margin-bottom: 0;
     color: #ffffff;
     text-align: center;
+    margin-top: 8;
 }

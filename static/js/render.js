@@ -44,14 +44,11 @@ $(document).ready(function(){
             updateList.push('<div class="notification-div" id="notification-div"><div class="notification-text-div"><h3 class="notification-header" id="notification-header">Heatmap updated</h3><p class="notification" id="notification">Last updated at: ' + msg.datetime + '.</p></div></div>');
         }
         
-        
         updateList.reverse();
     
         if (updateList.length >= 10) {
             updateList = updateList.slice(0, updateList.length-1);
         }
-        
-        var trollList = updateList.map(function(element) {return element});
         
         var newList = "";
         for (var i = 0; i < updateList.length; i++) {
@@ -84,8 +81,17 @@ $(document).ready(function(){
         for (var i = 0; i < updateList.length; i++) {
             newList = newList + updateList[i];
         }
-        
         document.getElementById('updates').innerHTML = newList;
+    });
+    
+    socket.on('record-flagger', function(msg) {
+    
+    	if (msg.flag == true) {
+    	    document.getElementById('rec').innerHTML = "Recording is ongoing right now.";
+    	}
+    	else {
+    	    document.getElementById('rec').innerHTML = "Data is not being recorded right now.";
+    	}
     });
 });
 

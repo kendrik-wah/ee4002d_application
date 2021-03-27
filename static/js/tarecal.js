@@ -38,7 +38,8 @@ $(document).ready(function(){
     
     socket.on('midtarecal', function() {
     	var updateList = Array.from(document.getElementById('updates').children);
-    	console.log(updateList);
+    	var updateList = updateList.map(function(element) {return element.outerHTML});
+    	
     	updateList.reverse();
     	updateList.push('<div class="notification-div" id="notification-div"><div class="notification-text-div"><h3 class="notification-header" id="notification-header">I\'m sorry, but hang on...</h3><p class="notification" id="notification">Floormat is still taring</p></div></div>');
     	updateList.reverse();

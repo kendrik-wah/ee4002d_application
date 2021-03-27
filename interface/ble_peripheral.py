@@ -13,8 +13,9 @@ def processData(data=None, delimiter=','):
 		pass
 	else:
 		# floormat values
-		# print(list(filter(lambda x: len(x) > 0, data.decode().split(','))))
+		#print(list(filter(lambda x: len(x) > 0, data.decode().split(','))))
 		return list(map(lambda x: float(x), list(filter(lambda x: len(x) > 0, data.decode().split(',')))))
+
 
 class PeripheralDelegate(DefaultDelegate):
 
@@ -22,15 +23,13 @@ class PeripheralDelegate(DefaultDelegate):
         DefaultDelegate.__init__(self)
         self.peripheral = per
 
-    def handleNotification(self, cHandle, data):      
+    def handleNotification(self, cHandle, data):
         self.peripheral.setDateTime(datetime.datetime.now())
-        # print("raw data: {}".format(data))
-        # print("===============================================\n")
+        data = self.peripheral.peripheral.readCharacteristic(cHandle)
         
-        if data == b'/' or data == b'\\':
-            self.peripheral.setData(data.decode())
-        elif data != b'1' and data != b'2':
+        if data != b'1' and data != b'2':
             self.peripheral.setData(processData(data, ','))
+            return
         else:
             print("data: {}".format(data))
         
@@ -39,19 +38,25 @@ class PeripheralDelegate(DefaultDelegate):
 
 
 class blePeripheral(object):
-	def __init__(self, addr):
+	def __init__(self, addr, mtu):
 		self.peripheral = Peripheral(addr, "public")
-		self.peripheral.setDelegate(PeripheralDelegate(self))
+		self.mtu = mtu
+		self.peripheral.setMTU(self.mtu)
 		self.dt = None
 		self.setDateTime(datetime.datetime.now())
-
 		self.data = ""
 
 	def getAddress(self):
 		return self.peripheral.addr
 
 	def disconnect(self):
-		return self.peripheral.disconnect()
+		try:
+			self.peripheral.disconnect()
+		except Exception as e:
+			raise(e)
+		else:
+			print("Peripheral disconnected!")
+			return
 
 	def acquireService(self, uuid=None):
 		if not uuid:
@@ -109,4 +114,3 @@ class blePeripheral(object):
 		else:
 			print("successfully written data!")	
 		# self.peripheral.getCharacteristics(uuid=uuid)[0].write(data)
-

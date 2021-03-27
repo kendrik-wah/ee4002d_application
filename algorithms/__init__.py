@@ -35,7 +35,7 @@ def createHeatMap(statemat, weightMap, r, c):
         for j in range(c):
             for key, val in weightMap.items():
                 if heatmap[i][j] <= 0:
-                    heatmap[i][j] = val["colour"]
+                    heatmap[i][j] = weightMap[1]["colour"]
                     break
 
                 elif val["min"] <= heatmap[i][j] <= val["max"]:
