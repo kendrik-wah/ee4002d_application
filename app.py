@@ -114,7 +114,7 @@ class RandomThread(Thread):
         self.refreshFlag = True
         self.writeFlag = False
         
-        self.workers = 4
+        self.workers = 1 # Change number of workers here.
         self.queue = Queue()
         for i in range(self.workers):
             worker = TimedThread(self.queue, self)
@@ -363,6 +363,9 @@ class RandomThread(Thread):
             if self.peripheral:
                 self.peripheral.disconnect()
             sys.exit(1)
+        except Exception as e:
+            if self.peripheral:
+                self.peripheral.disconnect()
 
 # Floormat Thread
 thread = RandomThread()
@@ -439,7 +442,16 @@ def index():
 ##########################################################
 
 if __name__ == "__main__":
-    socketio.run(app, debug=True, port=8000)
+    try:
+        socketio.run(app, debug=True, port=8000)
+    except KeyboardInterrupt:
+        if thread.peripheral:
+            thread.peripheral.disconnect()
+        sys.exit(1)
+    except Exception as e:
+        if thread.peripheral:
+            thread.peripheral.disconnect()
+        sys.exit(1)
     
 ########################################################
 # End main application code (DO NOT PUT ANYTHING HERE) #
