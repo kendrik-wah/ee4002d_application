@@ -114,7 +114,7 @@ class RandomThread(Thread):
         self.refreshFlag = True
         self.writeFlag = False
         
-        self.workers = 1
+        self.workers = 4
         self.queue = Queue()
         for i in range(self.workers):
             worker = TimedThread(self.queue, self)
@@ -329,7 +329,7 @@ class RandomThread(Thread):
         
         while not self.isConnected:
             self.connectDevice(self.scanDevices(), FLOORMAT_MAC, NOTIFY_UUID)
-            socketio.sleep(self.delay*10)
+            time.sleep(3)
             
             if self.isConnected:
                 break
