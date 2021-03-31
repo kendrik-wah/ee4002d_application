@@ -84,7 +84,20 @@ class TimedThread(Thread):
                     print('isTared: {}'.format(self.master.floormat.tareStatus()[0]))
                     print('completeTared: {}'.format(self.master.floormat.tareStatus()[1]))
                     print('writeFlag: {}'.format(self.master.writeFlag))
-                    
+            
+            except Exception as e:
+                self.master.peripheral.disconnect()
+                self.master.peripheral = blePeripheral(FLOORMAT_MAC, MTU_SIZE)
+                self.master.peripheral.peripheral.setDelegate(PeripheralDelegate(self.master.peripheral))
+                self.master.peripheral.enableNotify(uuid=NOTIFY_UUID)
+                self.master.floormat.set_isTared(False)
+                self.master.floormat.set_completeTared(False)
+                print("Peripheral successfully re-connected!")
+                
+            except KeyboardInterrupt:
+            	self.master.peripheral.disconnect()
+            	sys.exit(1)
+            	
             finally:
                 self.queue.task_done()
 
@@ -110,6 +123,7 @@ class RandomThread(Thread):
         self.rowCnt = 0
         self.tiles = set()
         
+        self.isConnecting = False
         self.isConnected = False
         self.refreshFlag = True
         self.writeFlag = False
@@ -137,16 +151,7 @@ class RandomThread(Thread):
     
     
     def scanDevices(self, cnt=0):
-        if cnt < 3:
-            try:
-                devices = self.bleScanner.scan()
-                return devices
-            except Exception as e:
-                socketio.sleep(3)
-                self.scanDevices(cnt+1)
-                
-        print("scanning protocol failed!")
-        return None
+        return self.bleScanner.scan()
     
     
     def getWriteFlag(self):
@@ -159,16 +164,24 @@ class RandomThread(Thread):
         self.writeFlag = flag
         
     
-    def connectDevice(self, devices, mac=None, notifyUUID=None):
-        print("Finding device {}".format(mac))
+    def connectDevice(self, devices, mac=None, notifyUUID=None, counter=0):
+        print("Finding device {}, counter at: {}".format(mac, counter))
+        
         if not devices:
             return False
             
+        elif counter >= 3:
+            print("isConnecting: {}, isConnected: {}".format(self.isConnecting, self.isConnected))
+            print("Max connection counter reached. Will restart after 5 seconds")
+            time.sleep(5)
+            self.connectDevice(self.scanDevices(), mac, notifyUUID, 0)
+            
         for device in devices:
-            if device.addr == mac and mac:
+            if device.addr == mac and mac and not self.isConnected and not self.isConnecting and counter < 3:
                 try:
                     self.peripheral = blePeripheral(device.addr, MTU_SIZE)
                     self.peripheral.peripheral.setDelegate(PeripheralDelegate(self.peripheral))
+                    self.isConnecting = True
                     
                     self.queue.put(POST)
                     self.queue.put(EMIT)
@@ -186,15 +199,21 @@ class RandomThread(Thread):
 
                     self.isConnected = True
                     print("Connected successfully to {}".format(mac))
-                    return self.isConnected
                              
                 except Exception as e:
-                    if isinstance(e, bluepy.btle.BTLEException):
-                        print("Device cannot be connected to. It may be connected currently.")
-                    else:
-                        raise(e)
-                    
-        return False
+                    raise(e)
+                    #if isinstance(e, bluepy.btle.BTLEException):
+                    #    print("Device cannot be connected to. It may be connected currently.")
+                    #    time.sleep(5)
+                    #    self.connectDevice(self.scanDevices(), mac, notifyUUID, counter+1)
+                    #else:
+                    #    raise(e)
+                        
+        if counter < 3 and not self.isConnected:
+            self.isConnecting = False
+            self.connectDevice(self.scanDevices(), mac, notifyUUID, counter+1)
+            
+        return counter < 3
                     
     def disconnectDevice(self):
         if not self.peripheral:
@@ -204,10 +223,11 @@ class RandomThread(Thread):
                  self.peripheral.disconnect()
                  self.isConnected = False
             except Exception as e:
-                 if isinstance(e, BTLEDisconnectError):
-                     print("Failed to disconnect peripheral. Peripheral might not be connected.")
-                 else:
-                     raise(e)
+                 raise(e)
+                 #if isinstance(e, BTLEDisconnectError):
+                  #   print("Failed to disconnect peripheral. Peripheral might not be connected.")
+                # else:
+                 #    raise(e)
                
                      
     def acquireData(self):
@@ -328,8 +348,10 @@ class RandomThread(Thread):
         self.heatmap = createHeatMap(self.statemat, self.weightMap, self.dims[1], self.dims[0])
         
         while not self.isConnected:
-            self.connectDevice(self.scanDevices(), FLOORMAT_MAC, NOTIFY_UUID)
-            time.sleep(3)
+            if not self.isConnecting:
+                self.isConnecting = True
+                self.connectDevice(self.scanDevices(), FLOORMAT_MAC, NOTIFY_UUID)
+            time.sleep(1)
             
             if self.isConnected:
                 break
@@ -347,7 +369,6 @@ class RandomThread(Thread):
                     pass
                             
             except Exception as e:
-                print("=========================== HELLO WORLD ========================")
                 self.peripheral.disconnect()
                 self.peripheral = blePeripheral(FLOORMAT_MAC, MTU_SIZE)
                 self.peripheral.peripheral.setDelegate(PeripheralDelegate(self.peripheral))
@@ -363,10 +384,8 @@ class RandomThread(Thread):
             if self.peripheral:
                 self.peripheral.disconnect()
             sys.exit(1)
-        except Exception as e:
-            if self.peripheral:
-                self.peripheral.disconnect()
-
+            
+            
 # Floormat Thread
 thread = RandomThread()
 thread_stop_event = Event()
@@ -412,9 +431,20 @@ def recordHandler():
 
 def tareCal(flag):
     if (flag == 1 or flag == 2) and not thread.floormat.tareStatus()[0]:
-        thread.floormat.set_isTared(True)
-        thread.peripheral.writeData(uuid="809a3309-2e5c-4d68-acef-196222cf9886", data=bytes(str(flag), encoding='utf-8'))
-        thread.floormat.set_completeTared(True)
+        try:
+            thread.floormat.set_isTared(True)
+            thread.peripheral.writeData(uuid="809a3309-2e5c-4d68-acef-196222cf9886", data=bytes(str(flag), encoding='utf-8'))
+            thread.floormat.set_completeTared(True)
+            
+        except Exception as e:
+            thread.peripheral.disconnect()
+            thread.peripheral = blePeripheral(FLOORMAT_MAC, MTU_SIZE)
+            thread.peripheral.peripheral.setDelegate(PeripheralDelegate(thread.peripheral))
+            thread.peripheral.enableNotify(uuid=NOTIFY_UUID)
+            thread.floormat.set_isTared(False)
+            thread.floormat.set_completeTared(False)
+            print("Peripheral successfully re-connected!")
+            
     else:
         socketio.emit('midtarecal')
         
@@ -445,10 +475,6 @@ if __name__ == "__main__":
     try:
         socketio.run(app, debug=True, port=8000)
     except KeyboardInterrupt:
-        if thread.peripheral:
-            thread.peripheral.disconnect()
-        sys.exit(1)
-    except Exception as e:
         if thread.peripheral:
             thread.peripheral.disconnect()
         sys.exit(1)
